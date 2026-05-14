@@ -57,7 +57,8 @@ static block_t *find_fit(size_t size) {
     if ( mm_heap_first == NULL ) return NULL;
     if ( search_start == NULL ) search_start = mm_heap_first;
         // If the block is free and large enough for the allocation, return it
-    block_t *curr = search_start;
+    block_t* start = search_start;
+    block_t *curr = start;
     while ( curr <= mm_heap_last ) {
 	    if ( !is_allocated(curr) && get_size(curr) >= size ) {
 		    search_start = curr;
@@ -66,7 +67,7 @@ static block_t *find_fit(size_t size) {
 	    curr = (block_t * ) ((uint8_t*) curr + get_size(curr));
      }
     curr = mm_heap_first;
-    while ( curr < search_start) {
+    while ( curr < start) {
 	    if ( !is_allocated(curr) && get_size(curr) >= size ) {
 		    search_start = curr;
 		    return curr;
