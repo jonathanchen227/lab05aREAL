@@ -60,14 +60,15 @@ static block_t *find_fit(size_t size) {
     block_t* start = search_start;
     block_t *block = start;
     do {
-	    if ( !block_allocated(block) && block_size(block) >= size ) {
-		    search_start = block_next(block);
+	    if ( !is_allocated(block) && get_size(block) >= size ) {
+		    block_t * next = (block==mm_heap_last) ? NULL : (block_t*)((uint8_t*)block + get_size(block));
+		    search_start = next;
 		    if ( search_start == NULL ) {
 			    search_start = mm_heap_first;
 		    }
 		    return block;
             }
-	    block = block_next(block);
+	    block = (block == mm_heap_last) ? NULL : (block_t*)((uint8_t*)block + get_size(block));
 	    if ( block == NULL) {
 		    block = mm_heap_first;
 	    }
@@ -77,7 +78,7 @@ static block_t *find_fit(size_t size) {
 
 /** Gets the header corresponding to a given payload pointer */
 static block_t *block_from_payload(void *ptr) {
-    return ptr - offsetof(block_t, payload);
+    return (block_t*)((uint8_t*)ptr - offsetof(block_t, payload));
 }
 
 
