@@ -111,9 +111,25 @@ void *mm_malloc(size_t size) {
     // If there is a large enough free block, use it
     block_t *block = find_fit(size);
     if (block != NULL) {
-        set_header(block, get_size(block), true);
-        return block->payload;
-    }
+        size_t old_size = get_size(block);
+	size_t remaining = old_size - size;
+	if ( remaining >= ALIGNMENT ) {
+		set_header(block,size,true);
+		block_t* new_block = (block_t*)((uint8_t*)block + size );
+		set_header(new_block, remaining, false);
+		if ( block == mm_heap_last) {
+			mm_heap_last = new_block;
+		}
+		search_start = new_block;
+	} else {
+		set_header(block,old_size,true);
+		search_start = (block_t*) ((uint8_t*)block + old_size);
+		if ( search_start > mm_heap_last) {
+			search_start = mm_heap_first;
+		}
+	}
+	return block->payload;
+}
 
     // Otherwise, a new block needs to be allocated at the end of the heap
     block = mem_sbrk(size);
@@ -152,7 +168,8 @@ void mm_free(void *ptr) {
 	    if(next==mm_heap_last){
 		    mm_heap_last = block;
 	    }
-    } 
+    }
+   search_start = block; 
 }
 
 /**
@@ -165,8 +182,7 @@ void *mm_realloc(void *old_ptr, size_t size) {
     }
     if ( size == 0 ) { mm_free(old_ptr); return NULL; }
     block_t* old_block = block_from_payload(old_ptr);
-    size_t old_size = get_size(old_block);
-    size_t old_payload_size = old_size -offsetof(block_t, payload);
+    size_t old_payload_size = get_size(old_block) - offsetof(block_t, payload);
     void* new_ptr = mm_malloc(size);
     if ( new_ptr == NULL ) {
 	    return NULL;
@@ -184,7 +200,11 @@ void *mm_realloc(void *old_ptr, size_t size) {
  * mm_calloc - Allocate the block and set it to zero.
  */
 void *mm_calloc(size_t nmemb, size_t size) {
-    size_t total = nmemb * size;
+    if ( nmemb != 0 && size > SIZE_MAX /nmemb ) {
+	    return NULL;
+   }
+
+	size_t total = nmemb * size;
     void* ptr = mm_malloc(total);
     if ( ptr == NULL ) {
 	    return NULL;
