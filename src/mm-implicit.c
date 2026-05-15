@@ -1,12 +1,13 @@
 /*
  * mm-implicit.c - The best malloc package EVAR!
- *
  * TODO (bug): mm_realloc and mm_calloc don't seem to be working...
  * TODO (bug): The allocator doesn't re-use space very well...
  */
 
 #include <stdint.h>
-
+#include <stddef.h>
+#include <stdbool.h>
+#include <string.h>
 #include "mm.h"
 #include "memlib.h"
 
@@ -159,18 +160,37 @@ void mm_free(void *ptr) {
  *      copying its data, and mm_freeing the old block.
  */
 void *mm_realloc(void *old_ptr, size_t size) {
-    (void) old_ptr;
-    (void) size;
-    return NULL;
+    if ( old_ptr == NULL ) {
+	    return mm_malloc(size);
+    }
+    if ( size == 0 ) { mm_free(old_ptr); return NULL; }
+    block_t* old_block = block_from_payload(old_ptr);
+    size_t old_size = get_size(old_block);
+    size_t old_payload_size = old_size -offsetof(block_t, payload);
+    void* new_ptr = mm_malloc(size);
+    if ( new_ptr == NULL ) {
+	    return NULL;
+    }
+    size_t copy_size = size;
+    if ( old_payload_size < copy_size ) {
+	    copy_size = old_payload_size;
+    }
+    memcpy(new_ptr,old_ptr,copy_size);
+    mm_free(old_ptr);
+    return new_ptr;
 }
 
 /**
  * mm_calloc - Allocate the block and set it to zero.
  */
 void *mm_calloc(size_t nmemb, size_t size) {
-    (void) nmemb;
-    (void) size;
-    return NULL;
+    size_t total = nmemb * size;
+    void* ptr = mm_malloc(total);
+    if ( ptr == NULL ) {
+	    return NULL;
+    }
+    memset(ptr,0,total);
+    return ptr;
 }
 
 /**
