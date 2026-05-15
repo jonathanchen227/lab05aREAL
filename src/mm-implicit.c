@@ -55,26 +55,23 @@ static bool is_allocated(block_t *block) {
  */
 static block_t *find_fit(size_t size) {
     // Traverse the blocks in the heap using the implicit list
-    if ( mm_heap_first == NULL ) return NULL;
     if ( search_start == NULL ) search_start = mm_heap_first;
         // If the block is free and large enough for the allocation, return it
     block_t* start = search_start;
-    block_t *curr = start;
-    while ( curr <= mm_heap_last ) {
-	    if ( !is_allocated(curr) && get_size(curr) >= size ) {
-		    search_start = curr;
-		    return curr;
+    block_t *block = start;
+    do {
+	    if ( !block_allocated(block) && block_size(block) >= size ) {
+		    search_start = block_next(block);
+		    if ( search_start == NULL ) {
+			    search_start = mm_heap_first;
+		    }
+		    return block;
+            }
+	    block = block_next(block);
+	    if ( block == NULL) {
+		    block = mm_heap_first;
 	    }
-	    curr = (block_t * ) ((uint8_t*) curr + get_size(curr));
-     }
-    curr = mm_heap_first;
-    while ( curr < start) {
-	    if ( !is_allocated(curr) && get_size(curr) >= size ) {
-		    search_start = curr;
-		    return curr;
-	    }
-	    curr = (block_t*)((uint8_t*)curr + get_size(curr));
-    }
+    } while (block != start);
     return NULL;
 }
 
@@ -97,7 +94,7 @@ bool mm_init(void) {
     // Initialize the heap with no blocks
     mm_heap_first = NULL;
     mm_heap_last = NULL;
-    search_start = NULL;
+    search_start = mm_heap_first;
     return true;
 }
 
